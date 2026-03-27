@@ -1,15 +1,10 @@
 import java.util.*;
 
-/**
- * ============================================================
- * CLASS - Reservation
- * ============================================================
- *
- * Represents a booking request made by a guest.
- */
 class Reservation {
+
     private String guestName;
     private String roomType;
+    private String roomId;
 
     public Reservation(String guestName, String roomType) {
         this.guestName = guestName;
@@ -23,167 +18,96 @@ class Reservation {
     public String getRoomType() {
         return roomType;
     }
-}
 
-/**
- * ============================================================
- * CLASS - RoomInventory
- * ============================================================
- *
- * Manages available rooms for each type.
- */
-class RoomInventory {
-
-    private Map<String, Integer> roomStock;
-
-    public RoomInventory() {
-        roomStock = new HashMap<>();
-
-        // Initial stock
-        roomStock.put("Single", 2);
-        roomStock.put("Double", 2);
-        roomStock.put("Suite", 1);
+    public void setRoomId(String roomId) {
+        this.roomId = roomId;
     }
 
-    public boolean isAvailable(String roomType) {
-        return roomStock.getOrDefault(roomType, 0) > 0;
+    public String getRoomId() {
+        return roomId;
     }
 
-    public void bookRoom(String roomType) {
-        roomStock.put(roomType, roomStock.get(roomType) - 1);
+    public void displayReservation() {
+        System.out.println("Guest: " + guestName + ", Room Type: " + roomType + ", Room ID: " + roomId);
     }
 }
 
-/**
- * ============================================================
- * CLASS - RoomAllocationService
- * ============================================================
- *
- * Use Case 6: Reservation Confirmation & Room Allocation
- *
- * Description:
- * This class is responsible for confirming
- * booking requests and assigning rooms.
- *
- * - It ensures:
- *   Each room ID is unique
- *   Inventory is updated immediately
- *   No room is double-booked
- *
- * @version 6.0
- */
-class RoomAllocationService {
+class Service {
 
-    /**
-     * Stores all allocated room IDs to
-     * prevent duplicate assignments.
-     */
-    private Set<String> allocatedRooms;
+    private String serviceName;
+    private double cost;
 
-    /**
-     * Stores assigned room IDs by room type.
-     *
-     * Key   -> Room type
-     * Value -> Set of assigned room IDs
-     */
-    private Map<String, Set<String>> assignedRoomsByType;
-
-    /**
-     * Initializes allocation tracking structures.
-     */
-    public RoomAllocationService() {
-        allocatedRooms = new HashSet<>();
-        assignedRoomsByType = new HashMap<>();
+    public Service(String serviceName, double cost) {
+        this.serviceName = serviceName;
+        this.cost = cost;
     }
 
-    /**
-     * Confirms a booking request by assigning
-     * an available room ID and updating inventory.
-     *
-     * @param reservation booking request
-     * @param inventory   centralized room inventory
-     */
-    public void allocateRoom(Reservation reservation, RoomInventory inventory) {
+    public String getServiceName() {
+        return serviceName;
+    }
 
-        String roomType = reservation.getRoomType();
+    public double getCost() {
+        return cost;
+    }
 
-        if (!inventory.isAvailable(roomType)) {
-            System.out.println("No rooms available for type: " + roomType);
-            return;
+    public void displayService() {
+        System.out.println("Service: " + serviceName + ", Cost: " + cost);
+    }
+}
+
+class AddOnServiceManager {
+
+    private Map<String, List<Service>> reservationServices;
+
+    public AddOnServiceManager() {
+        reservationServices = new HashMap<>();
+    }
+
+    public void addService(String roomId, Service service) {
+        reservationServices.putIfAbsent(roomId, new ArrayList<>());
+        reservationServices.get(roomId).add(service);
+        System.out.println("Added service " + service.getServiceName() + " to reservation " + roomId);
+    }
+
+    public void displayServices(String roomId) {
+        List<Service> services = reservationServices.getOrDefault(roomId, new ArrayList<>());
+        if (services.isEmpty()) {
+            System.out.println("No add-on services selected for reservation " + roomId);
+        } else {
+            System.out.println("\n--- Add-On Services for Reservation " + roomId + " ---");
+            double totalCost = 0;
+            for (Service s : services) {
+                s.displayService();
+                totalCost += s.getCost();
+            }
+            System.out.println("Total Add-On Cost: " + totalCost);
         }
-
-        // Generate unique room ID
-        String roomId = generateRoomId(roomType);
-
-        // Track allocation
-        allocatedRooms.add(roomId);
-
-        assignedRoomsByType.putIfAbsent(roomType, new HashSet<>());
-        assignedRoomsByType.get(roomType).add(roomId);
-
-        // Update inventory
-        inventory.bookRoom(roomType);
-
-        System.out.println("Booking confirmed for Guest: "
-                + reservation.getGuestName()
-                + ", Room ID: " + roomId);
-    }
-
-    /**
-     * Generates a unique room ID
-     * for the given room type.
-     *
-     * @param roomType type of room
-     * @return unique room ID
-     */
-    private String generateRoomId(String roomType) {
-        int count = assignedRoomsByType.getOrDefault(roomType, new HashSet<>()).size() + 1;
-        return roomType + "-" + count;
     }
 }
 
-/**
- * ============================================================
- * MAIN CLASS - UseCase6RoomAllocation
- * ============================================================
- *
- * Use Case 6: Reservation Confirmation & Room Allocation
- *
- * Description:
- * This class demonstrates how booking
- * requests are confirmed and rooms
- * are allocated safely.
- *
- * It consumes booking requests in FIFO
- * order and updates inventory immediately.
- *
- * @version 6.0
- */
-public class BookMyStayApp {
+public class BookMyStayApp{
 
-    /**
-     * Application entry point.
-     *
-     * @param args Command-line arguments
-     */
     public static void main(String[] args) {
 
-        System.out.println("Room Allocation Processing");
+        System.out.println("Welcome to Book My Stay App");
+        System.out.println("Hotel Booking System v7.0");
 
-        // Create inventory
-        RoomInventory inventory = new RoomInventory();
+        // Example reservation
+        Reservation reservation = new Reservation("Alice", "Single Room");
+        reservation.setRoomId("S-12");
+        reservation.displayReservation();
 
-        // Create allocation service
-        RoomAllocationService service = new RoomAllocationService();
+        // Add-on services
+        Service breakfast = new Service("Breakfast", 200);
+        Service spa = new Service("Spa Session", 500);
+        Service airportPickup = new Service("Airport Pickup", 300);
 
-        // Create booking requests
-        Reservation r1 = new Reservation("Abhi", "Single");
-        Reservation r2 = new Reservation("Subha", "Single");
-        Reservation r3 = new Reservation("Vamathi", "Suite");
+        AddOnServiceManager serviceManager = new AddOnServiceManager();
 
-        // Process bookings
-        service.allocateRoom(r1, inventory);
-        service.allocateRoom(r2, inventory);
-        service.allocateRoom(r3, inventory);
+        serviceManager.addService(reservation.getRoomId(), breakfast);
+        serviceManager.addService(reservation.getRoomId(), spa);
+        serviceManager.addService(reservation.getRoomId(), airportPickup);
+
+        serviceManager.displayServices(reservation.getRoomId());
     }
 }
