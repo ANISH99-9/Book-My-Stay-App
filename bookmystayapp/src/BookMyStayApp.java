@@ -1,126 +1,181 @@
-import java.util.HashMap;
-import java.util.Map;
+// ------------------------------------------------------------
+// CLASS : RoomSearchService
+// ------------------------------------------------------------
+// USE CASE 4 : Room Search & Availability Check
+//
+// Description:
+// - Users can search for rooms based on:
+//   room type, size, and price range
+// - It reads room availability from inventory
+//   and filters from database
+// - Implements validation and booking logic
+// - Uses ArrayList as collection
+// ------------------------------------------------------------
 
-/**
- * ============================================================
- * CLASS - RoomInventory
- * ============================================================
- *
- * Use Case 3: Centralized Room Inventory Management
- *
- * Description:
- * This class acts as the single source of truth
- * for room availability in the hotel.
- *
- * Room pricing and characteristics are obtained
- * from Room objects, not duplicated here.
- *
- * This avoids multiple sources of truth and
- * keeps responsibilities clearly separated.
- *
- * @version 3.1
- */
-class RoomInventory {
+import java.util.*;
 
-    /**
-     * Stores available room count for each room type.
-     *
-     * Key   -> Room type name
-     * Value -> Available room count
-     */
-    private Map<String, Integer> roomAvailability;
+// ------------------------------------------------------------
+// Base Room Class
+// ------------------------------------------------------------
+class Room {
+    protected String type;
+    protected int size;
+    protected double pricePerNight;
+    protected boolean available;
 
-    /**
-     * Constructor initializes the inventory
-     * with default availability values.
-     */
-    public RoomInventory() {
-        roomAvailability = new HashMap<>();
-        initializeInventory();
+    public Room(String type, int size, double pricePerNight, boolean available) {
+        this.type = type;
+        this.size = size;
+        this.pricePerNight = pricePerNight;
+        this.available = available;
     }
 
-    /**
-     * Initializes room availability data.
-     *
-     * This method centralizes inventory setup
-     * instead of using scattered variables.
-     */
-    private void initializeInventory() {
-        roomAvailability.put("Single Room", 5);
-        roomAvailability.put("Double Room", 3);
-        roomAvailability.put("Suite Room", 2);
+    public String getType() {
+        return type;
     }
 
-    /**
-     * Returns the current availability map.
-     *
-     * @return map of room type to available count
-     */
-    public Map<String, Integer> getRoomAvailability() {
-        return roomAvailability;
+    public int getSize() {
+        return size;
     }
 
-    /**
-     * Updates availability for a specific room type.
-     *
-     * @param roomType the room type to update
-     * @param count new availability count
-     */
-    public void updateAvailability(String roomType, int count) {
-        roomAvailability.put(roomType, count);
+    public double getPricePerNight() {
+        return pricePerNight;
+    }
+
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public void display() {
+        System.out.println("Room Type: " + type);
+        System.out.println("Size: " + size + " sqft");
+        System.out.println("Price per night: " + pricePerNight);
+        System.out.println("Available: " + available);
+        System.out.println();
     }
 }
 
+// ------------------------------------------------------------
+// Suite Class (Inheritance)
+// ------------------------------------------------------------
+class Suite extends Room {
+    public Suite(String type, int size, double pricePerNight, boolean available) {
+        super(type, size, pricePerNight, available);
+    }
+}
 
-/**
- * ============================================================
- * MAIN CLASS - UseCase3InventorySetup
- * ============================================================
- *
- * Use Case 3: Centralized Room Inventory Management
- *
- * Description:
- * This class demonstrates how room availability
- * is managed using a centralized inventory.
- *
- * Room objects are used to retrieve pricing
- * and room characteristics.
- *
- * No booking or search logic is introduced here.
- *
- * @version 3.1
- */
-public class BookMyStayApp{
+// ------------------------------------------------------------
+// Inventory Class
+// ------------------------------------------------------------
+// Stores available rooms
+// ------------------------------------------------------------
+class RoomInventory {
+    private List<Room> rooms;
 
-    /**
-     * Application entry point.
-     *
-     * @param args Command-line arguments
-     */
+    public RoomInventory() {
+        rooms = new ArrayList<>();
+    }
+
+    public void addRoom(Room room) {
+        rooms.add(room);
+    }
+
+    public List<Room> getAllRooms() {
+        return rooms;
+    }
+}
+
+// ------------------------------------------------------------
+// RoomSearchService Class
+// ------------------------------------------------------------
+public class BookMyStayApp {
+
+    // --------------------------------------------------------
+    // Search function receives filters:
+    // type, size and price range
+    // --------------------------------------------------------
+    public static List<Room> searchAvailableRooms(
+            RoomInventory inventory,
+            String type,
+            int minSize,
+            double maxPrice) {
+
+        List<Room> result = new ArrayList<>();
+
+        // Fetches inventory availability
+        List<Room> allRooms = inventory.getAllRooms();
+
+        // Core search logic using filters
+        for (Room room : allRooms) {
+
+            // Check availability
+            if (!room.isAvailable()) continue;
+
+            // Check type match
+            if (!room.getType().equalsIgnoreCase(type)) continue;
+
+            // Check size
+            if (room.getSize() < minSize) continue;
+
+            // Check price
+            if (room.getPricePerNight() > maxPrice) continue;
+
+            result.add(room);
+        }
+
+        return result;
+    }
+
+    // --------------------------------------------------------
+    // MAIN CLASS : UseCaseRoomSearch
+    // --------------------------------------------------------
+    // USE CASE 4 : Room Search & Availability Check
+    //
+    // Description:
+    // - Driver class for user interaction
+    // - Takes user inputs
+    // - Displays filtered room results
+    //
+    // Duration: 1.0
+    // --------------------------------------------------------
     public static void main(String[] args) {
 
-        System.out.println("=======================================");
-        System.out.println("   Welcome to Book My Stay Application  ");
-        System.out.println("           Version: 3.1                 ");
-        System.out.println("=======================================\n");
+        // Application entry point
+        // Reads command-line inputs
 
-        // Initialize centralized inventory
+        Scanner sc = new Scanner(System.in);
+
+        // Create inventory and add sample rooms
         RoomInventory inventory = new RoomInventory();
 
-        // Display current inventory
-        System.out.println("---- Current Room Availability ----");
-        for (Map.Entry<String, Integer> entry : inventory.getRoomAvailability().entrySet()) {
-            System.out.println(entry.getKey() + " : " + entry.getValue());
+        inventory.addRoom(new Room("Single", 100, 1500.0, true));
+        inventory.addRoom(new Room("Double", 200, 2500.0, false));
+        inventory.addRoom(new Suite("Suite", 350, 5000.0, true));
+
+        // Input from user
+        System.out.print("Enter room type: ");
+        String type = sc.nextLine();
+
+        System.out.print("Enter minimum size: ");
+        int minSize = sc.nextInt();
+
+        System.out.print("Enter max price: ");
+        double maxPrice = sc.nextDouble();
+
+        // Search rooms
+        List<Room> results = searchAvailableRooms(inventory, type, minSize, maxPrice);
+
+        // Display results
+        System.out.println("\n--- Available Rooms ---\n");
+
+        if (results.isEmpty()) {
+            System.out.println("No rooms found.");
+        } else {
+            for (Room room : results) {
+                room.display();
+            }
         }
 
-        // Update availability example
-        System.out.println("\nUpdating availability...\n");
-        inventory.updateAvailability("Single Room", 4);
-
-        // Display updated inventory
-        System.out.println("---- Updated Room Availability ----");
-        for (Map.Entry<String, Integer> entry : inventory.getRoomAvailability().entrySet()) {
-            System.out.println(entry.getKey() + " : " + entry.getValue());
-        }
+        sc.close();
     }
 }
