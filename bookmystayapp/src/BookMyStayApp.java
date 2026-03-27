@@ -1,181 +1,91 @@
-// ------------------------------------------------------------
-// CLASS : RoomSearchService
-// ------------------------------------------------------------
-// USE CASE 4 : Room Search & Availability Check
-//
-// Description:
-// - Users can search for rooms based on:
-//   room type, size, and price range
-// - It reads room availability from inventory
-//   and filters from database
-// - Implements validation and booking logic
-// - Uses ArrayList as collection
-// ------------------------------------------------------------
+import java.util.LinkedList;
+import java.util.Queue;
 
-import java.util.*;
+// Reservation class representing a guest's booking request
+class Reservation {
+    private String guestName;
+    private String roomType;
+    private int nights;
 
-// ------------------------------------------------------------
-// Base Room Class
-// ------------------------------------------------------------
-class Room {
-    protected String type;
-    protected int size;
-    protected double pricePerNight;
-    protected boolean available;
-
-    public Room(String type, int size, double pricePerNight, boolean available) {
-        this.type = type;
-        this.size = size;
-        this.pricePerNight = pricePerNight;
-        this.available = available;
+    public Reservation(String guestName, String roomType, int nights) {
+        this.guestName = guestName;
+        this.roomType = roomType;
+        this.nights = nights;
     }
 
-    public String getType() {
-        return type;
+    public String getGuestName() {
+        return guestName;
     }
 
-    public int getSize() {
-        return size;
+    public String getRoomType() {
+        return roomType;
     }
 
-    public double getPricePerNight() {
-        return pricePerNight;
+    public int getNights() {
+        return nights;
     }
 
-    public boolean isAvailable() {
-        return available;
-    }
-
-    public void display() {
-        System.out.println("Room Type: " + type);
-        System.out.println("Size: " + size + " sqft");
-        System.out.println("Price per night: " + pricePerNight);
-        System.out.println("Available: " + available);
-        System.out.println();
+    @Override
+    public String toString() {
+        return "Reservation [Guest=" + guestName +
+                ", RoomType=" + roomType +
+                ", Nights=" + nights + "]";
     }
 }
 
-// ------------------------------------------------------------
-// Suite Class (Inheritance)
-// ------------------------------------------------------------
-class Suite extends Room {
-    public Suite(String type, int size, double pricePerNight, boolean available) {
-        super(type, size, pricePerNight, available);
-    }
-}
+// Booking Request Queue manager
+class BookingRequestQueue {
+    private Queue<Reservation> requestQueue;
 
-// ------------------------------------------------------------
-// Inventory Class
-// ------------------------------------------------------------
-// Stores available rooms
-// ------------------------------------------------------------
-class RoomInventory {
-    private List<Room> rooms;
-
-    public RoomInventory() {
-        rooms = new ArrayList<>();
+    public BookingRequestQueue() {
+        requestQueue = new LinkedList<>();
     }
 
-    public void addRoom(Room room) {
-        rooms.add(room);
+    // Add booking request to queue
+    public void addRequest(Reservation reservation) {
+        requestQueue.offer(reservation);
+        System.out.println("Booking request added: " + reservation);
     }
 
-    public List<Room> getAllRooms() {
-        return rooms;
-    }
-}
-
-// ------------------------------------------------------------
-// RoomSearchService Class
-// ------------------------------------------------------------
-public class BookMyStayApp {
-
-    // --------------------------------------------------------
-    // Search function receives filters:
-    // type, size and price range
-    // --------------------------------------------------------
-    public static List<Room> searchAvailableRooms(
-            RoomInventory inventory,
-            String type,
-            int minSize,
-            double maxPrice) {
-
-        List<Room> result = new ArrayList<>();
-
-        // Fetches inventory availability
-        List<Room> allRooms = inventory.getAllRooms();
-
-        // Core search logic using filters
-        for (Room room : allRooms) {
-
-            // Check availability
-            if (!room.isAvailable()) continue;
-
-            // Check type match
-            if (!room.getType().equalsIgnoreCase(type)) continue;
-
-            // Check size
-            if (room.getSize() < minSize) continue;
-
-            // Check price
-            if (room.getPricePerNight() > maxPrice) continue;
-
-            result.add(room);
+    // View all queued requests
+    public void viewQueue() {
+        if (requestQueue.isEmpty()) {
+            System.out.println("No booking requests in queue.");
+            return;
         }
 
-        return result;
+        System.out.println("\nCurrent Booking Request Queue:");
+        for (Reservation r : requestQueue) {
+            System.out.println(r);
+        }
     }
 
-    // --------------------------------------------------------
-    // MAIN CLASS : UseCaseRoomSearch
-    // --------------------------------------------------------
-    // USE CASE 4 : Room Search & Availability Check
-    //
-    // Description:
-    // - Driver class for user interaction
-    // - Takes user inputs
-    // - Displays filtered room results
-    //
-    // Duration: 1.0
-    // --------------------------------------------------------
+    // Get next request (for future processing)
+    public Reservation getNextRequest() {
+        return requestQueue.peek(); // does NOT remove
+    }
+}
+
+// Main class
+public class BookMyStayApp{
     public static void main(String[] args) {
 
-        // Application entry point
-        // Reads command-line inputs
+        BookingRequestQueue queue = new BookingRequestQueue();
 
-        Scanner sc = new Scanner(System.in);
+        // Simulating incoming booking requests (arrival order matters)
+        Reservation r1 = new Reservation("Alice", "Deluxe", 2);
+        Reservation r2 = new Reservation("Bob", "Standard", 1);
+        Reservation r3 = new Reservation("Charlie", "Suite", 3);
 
-        // Create inventory and add sample rooms
-        RoomInventory inventory = new RoomInventory();
+        // Add requests to queue
+        queue.addRequest(r1);
+        queue.addRequest(r2);
+        queue.addRequest(r3);
 
-        inventory.addRoom(new Room("Single", 100, 1500.0, true));
-        inventory.addRoom(new Room("Double", 200, 2500.0, false));
-        inventory.addRoom(new Suite("Suite", 350, 5000.0, true));
+        // View queue (FIFO order preserved)
+        queue.viewQueue();
 
-        // Input from user
-        System.out.print("Enter room type: ");
-        String type = sc.nextLine();
-
-        System.out.print("Enter minimum size: ");
-        int minSize = sc.nextInt();
-
-        System.out.print("Enter max price: ");
-        double maxPrice = sc.nextDouble();
-
-        // Search rooms
-        List<Room> results = searchAvailableRooms(inventory, type, minSize, maxPrice);
-
-        // Display results
-        System.out.println("\n--- Available Rooms ---\n");
-
-        if (results.isEmpty()) {
-            System.out.println("No rooms found.");
-        } else {
-            for (Room room : results) {
-                room.display();
-            }
-        }
-
-        sc.close();
+        // Peek next request (no allocation yet)
+        System.out.println("\nNext request to process: " + queue.getNextRequest());
     }
 }
