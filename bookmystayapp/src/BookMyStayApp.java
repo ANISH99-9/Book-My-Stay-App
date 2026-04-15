@@ -1,134 +1,172 @@
 import java.util.*;
 
-// Reservation class to represent a booking
+// Custom Exception
+class CancellationException extends Exception {
+    public CancellationException(String message) {
+        super(message);
+    }
+}
+
+// Reservation Class
 class Reservation {
     private String bookingId;
     private String customerName;
     private String roomType;
-    private int nights;
-    private double pricePerNight;
+    private String roomId;
+    private boolean isCancelled;
 
-    public Reservation(String bookingId, String customerName, String roomType, int nights, double pricePerNight) {
+    public Reservation(String bookingId, String customerName, String roomType, String roomId) {
         this.bookingId = bookingId;
         this.customerName = customerName;
         this.roomType = roomType;
-        this.nights = nights;
-        this.pricePerNight = pricePerNight;
-    }
-
-    public double getTotalCost() {
-        return nights * pricePerNight;
+        this.roomId = roomId;
+        this.isCancelled = false;
     }
 
     public String getBookingId() {
         return bookingId;
     }
 
-    public String getCustomerName() {
-        return customerName;
-    }
-
     public String getRoomType() {
         return roomType;
     }
 
-    public int getNights() {
-        return nights;
+    public String getRoomId() {
+        return roomId;
     }
 
-    public double getPricePerNight() {
-        return pricePerNight;
+    public boolean isCancelled() {
+        return isCancelled;
+    }
+
+    public void cancel() {
+        this.isCancelled = true;
     }
 
     @Override
     public String toString() {
         return "BookingID: " + bookingId +
                 ", Customer: " + customerName +
-                ", Room: " + roomType +
-                ", Nights: " + nights +
-                ", Total Cost: ₹" + getTotalCost();
+                ", RoomType: " + roomType +
+                ", RoomID: " + roomId +
+                ", Status: " + (isCancelled ? "Cancelled" : "Confirmed");
     }
 }
 
-// Booking History (stores confirmed reservations)
+// Inventory Management
+class RoomInventory {
+    private Map<String, Integer> inventory = new HashMap<>();
+
+    public RoomInventory() {
+        inventory.put("Standard", 2);
+        inventory.put("Deluxe", 2);
+        inventory.put("Suite", 1);
+    }
+
+    public void increment(String roomType) {
+        inventory.put(roomType, inventory.getOrDefault(roomType, 0) + 1);
+    }
+
+    public void display() {
+        System.out.println("\nUpdated Inventory:");
+        for (String type : inventory.keySet()) {
+            System.out.println(type + ": " + inventory.get(type));
+        }
+    }
+}
+
+// Booking History
 class BookingHistory {
-    private List<Reservation> reservations;
+    private Map<String, Reservation> bookings = new HashMap<>();
 
-    public BookingHistory() {
-        reservations = new ArrayList<>();
+    public void addReservation(Reservation r) {
+        bookings.put(r.getBookingId(), r);
     }
 
-    // Add confirmed booking
-    public void addReservation(Reservation reservation) {
-        reservations.add(reservation);
+    public Reservation getReservation(String bookingId) {
+        return bookings.get(bookingId);
     }
 
-    // Retrieve all bookings (read-only)
-    public List<Reservation> getAllReservations() {
-        return Collections.unmodifiableList(reservations);
-    }
-}
-
-// Report Service (separate from storage)
-class BookingReportService {
-
-    // Display all bookings
-    public void printAllBookings(List<Reservation> reservations) {
-        System.out.println("\n--- Booking History ---");
-        for (Reservation r : reservations) {
+    public void displayAll() {
+        System.out.println("\nBooking History:");
+        for (Reservation r : bookings.values()) {
             System.out.println(r);
         }
     }
+}
 
-    // Generate summary report
-    public void generateSummary(List<Reservation> reservations) {
-        int totalBookings = reservations.size();
-        double totalRevenue = 0;
+// Cancellation Service with Stack (LIFO rollback)
+class CancellationService {
+    private BookingHistory history;
+    private RoomInventory inventory;
+    private Stack<String> rollbackStack = new Stack<>();
 
-        Map<String, Integer> roomTypeCount = new HashMap<>();
+    public CancellationService(BookingHistory history, RoomInventory inventory) {
+        this.history = history;
+        this.inventory = inventory;
+    }
 
-        for (Reservation r : reservations) {
-            totalRevenue += r.getTotalCost();
+    public void cancelBooking(String bookingId) throws CancellationException {
 
-            roomTypeCount.put(
-                    r.getRoomType(),
-                    roomTypeCount.getOrDefault(r.getRoomType(), 0) + 1
-            );
+        // Validate existence
+        Reservation r = history.getReservation(bookingId);
+        if (r == null) {
+            throw new CancellationException("Booking does not exist: " + bookingId);
         }
 
-        System.out.println("\n--- Booking Summary Report ---");
-        System.out.println("Total Bookings: " + totalBookings);
-        System.out.println("Total Revenue: ₹" + totalRevenue);
-
-        System.out.println("\nRoom Type Distribution:");
-        for (String type : roomTypeCount.keySet()) {
-            System.out.println(type + ": " + roomTypeCount.get(type));
+        // Prevent duplicate cancellation
+        if (r.isCancelled()) {
+            throw new CancellationException("Booking already cancelled: " + bookingId);
         }
+
+        // Step 1: Record room ID in rollback stack
+        rollbackStack.push(r.getRoomId());
+
+        // Step 2: Restore inventory
+        inventory.increment(r.getRoomType());
+
+        // Step 3: Mark booking as cancelled
+        r.cancel();
+
+        System.out.println("Cancellation successful for BookingID: " + bookingId);
+    }
+
+    public void showRollbackStack() {
+        System.out.println("\nRollback Stack (LIFO): " + rollbackStack);
     }
 }
 
-// Main class
+// Main Class
 public class BookMyStayApp {
 
     public static void main(String[] args) {
 
+        RoomInventory inventory = new RoomInventory();
         BookingHistory history = new BookingHistory();
-        BookingReportService reportService = new BookingReportService();
 
-        // Simulating confirmed bookings
-        Reservation r1 = new Reservation("B001", "Arun", "Deluxe", 2, 3000);
-        Reservation r2 = new Reservation("B002", "Meena", "Standard", 3, 2000);
-        Reservation r3 = new Reservation("B003", "Ravi", "Suite", 1, 5000);
+        // Simulated confirmed bookings
+        Reservation r1 = new Reservation("B001", "Arun", "Deluxe", "D101");
+        Reservation r2 = new Reservation("B002", "Meena", "Standard", "S201");
 
-        // Add to booking history
         history.addReservation(r1);
         history.addReservation(r2);
-        history.addReservation(r3);
 
-        // Admin views booking history
-        reportService.printAllBookings(history.getAllReservations());
+        CancellationService service = new CancellationService(history, inventory);
 
-        // Admin generates report
-        reportService.generateSummary(history.getAllReservations());
+        // Test cancellations
+        String[] testCases = {"B001", "B003", "B001"};
+
+        for (String bookingId : testCases) {
+            try {
+                service.cancelBooking(bookingId);
+            } catch (CancellationException e) {
+                System.out.println("Cancellation Failed: " + e.getMessage());
+            }
+        }
+
+        // Display system state
+        history.displayAll();
+        inventory.display();
+        service.showRollbackStack();
     }
 }
